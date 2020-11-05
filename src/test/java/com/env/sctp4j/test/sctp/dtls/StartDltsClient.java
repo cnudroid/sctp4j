@@ -54,15 +54,7 @@ public class StartDltsClient {
 
             @Override
             public void onMessage(SCTPStream s, byte[] message) {
-
-                //srvRcvdBuf.put(message);
                 Log.info("Counter --"+ counte1r.getAndIncrement() + "Rcvd Byte on message length: " + message.length);
-               // Path path = Paths.get("logs/content-server.log");
-//                try {
-//                    Files.write(path, message);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
             }
 
             @Override
@@ -101,10 +93,19 @@ public class StartDltsClient {
         clientAssoc.sendHeartBeat();
         //Thread.sleep(3000);
         Log.info("%%%%%%%%%%%%%%%%% let's start client sending msgs %%%%%%%%%%%%%%%%%%%%%");
+        /**
+         * uncommented this method will send single msg of 8k size with fixed delay
+         */
         //scheduleMsgs(clientAssoc);
+        /**
+         * this method will send 5 concurrent msgs of size 8k.
+         */
         scheduleMultipleMsgsAtFixedRate(clientAssoc);
     }
 
+    /**
+     * this method will send 5 concurrent msgs of size 8k.
+     */
     private static void scheduleMultipleMsgsAtFixedRate(ThreadedAssociation clientAssoc) {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);//Executors.newSingleThreadScheduledExecutor();
         AtomicInteger counter = new AtomicInteger();
@@ -117,6 +118,9 @@ public class StartDltsClient {
         }
     }
 
+    /**
+     *  this method will send single msg of 8k size with fixed delay
+     */
     private static void scheduleMsgs(ThreadedAssociation clientAssoc) {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(5);//Executors.newSingleThreadScheduledExecutor();
         AtomicInteger counter = new AtomicInteger();
