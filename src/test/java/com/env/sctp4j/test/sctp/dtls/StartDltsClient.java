@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.security.SecureRandom;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -95,12 +96,27 @@ public class StartDltsClient {
         Log.info("%%%%%%%%%%%%%%%%% let's start client sending msgs %%%%%%%%%%%%%%%%%%%%%");
         /**
          * uncommented this method will send single msg of 8k size with fixed delay
+         * this is WORKING
          */
         //scheduleMsgs(clientAssoc);
         /**
          * this method will send 5 concurrent msgs of size 8k.
+         * this is NOT WORKING
          */
         scheduleMultipleMsgsAtFixedRate(clientAssoc);
+        /**
+         * basically if we send two requests in parallel, this is also NOT WORKING.
+         *
+         */
+        scheduleMultipleMsgsConcurrently(clientAssoc);
+    }
+
+    private static void scheduleMultipleMsgsConcurrently(ThreadedAssociation clientAssoc) {
+        ExecutorService _ex_service = Executors.newFixedThreadPool(5);
+        AtomicInteger counter = new AtomicInteger();
+        for(int j=0;j<2;j++) {
+            _ex_service.submit(() -> sendMsg(clientAssoc, counter));
+        }
     }
 
     /**

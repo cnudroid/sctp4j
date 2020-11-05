@@ -36,7 +36,7 @@ public class DTLSServerTest
 
         int mtu = 1500;
 
-        Log.setLevel(Log.INFO);
+        Log.setLevel(Log.ALL);
 
         SecureRandom secureRandom = new SecureRandom();
 
