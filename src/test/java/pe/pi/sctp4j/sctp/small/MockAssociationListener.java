@@ -1,4 +1,4 @@
-package com.cc.test.sctp;
+package pe.pi.sctp4j.sctp.small;
 
 import com.phono.srtplight.Log;
 import pe.pi.sctp4j.sctp.Association;

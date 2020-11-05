@@ -30,12 +30,13 @@ import java.util.concurrent.Executors;
  */
 public class BlockingSCTPStream extends SCTPStream {
 
-    private final ExecutorService _ex_service;
+    private static final ExecutorService _ex_service = Executors.newFixedThreadPool(100);
+
     private HashMap<Integer,SCTPMessage> undeliveredOutboundMessages = new HashMap();
     
     BlockingSCTPStream(Association a, Integer id) {
         super(a, id);
-        _ex_service = Executors.newSingleThreadExecutor();
+//        _ex_service = Executors.newSingleThreadExecutor();
     }
 
     @Override

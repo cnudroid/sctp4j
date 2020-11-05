@@ -1,35 +1,22 @@
 package org.bouncycastle.tls.test;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.security.SecureRandom;
-
 import org.bouncycastle.asn1.x509.Certificate;
-import org.bouncycastle.tls.AlertDescription;
-import org.bouncycastle.tls.AlertLevel;
-import org.bouncycastle.tls.CertificateRequest;
-import org.bouncycastle.tls.ChannelBinding;
-import org.bouncycastle.tls.ClientCertificateType;
-import org.bouncycastle.tls.DefaultTlsClient;
-import org.bouncycastle.tls.ProtocolVersion;
-import org.bouncycastle.tls.SignatureAlgorithm;
-import org.bouncycastle.tls.TlsAuthentication;
-import org.bouncycastle.tls.TlsCredentials;
-import org.bouncycastle.tls.TlsFatalAlert;
-import org.bouncycastle.tls.TlsServerCertificate;
-import org.bouncycastle.tls.TlsSession;
-import org.bouncycastle.tls.TlsUtils;
+import org.bouncycastle.tls.*;
 import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Hex;
 
-class MockDTLSClient
+import java.io.IOException;
+import java.io.PrintStream;
+import java.security.SecureRandom;
+
+public class MockDTLSClient
         extends DefaultTlsClient
 {
     TlsSession session;
 
-    MockDTLSClient(TlsSession session)
+    public MockDTLSClient(TlsSession session)
     {
         super(new BcTlsCrypto(new SecureRandom()));
 

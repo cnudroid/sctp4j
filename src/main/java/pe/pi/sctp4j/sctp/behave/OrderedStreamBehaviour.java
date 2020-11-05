@@ -87,10 +87,14 @@ public class OrderedStreamBehaviour implements SCTPStreamBehaviour {
                 case 0: // middle 
                     if (message != null) {
                         message.add(dc);
-                        Log.verb("continued message no" + dc.getSSeqNo() + " with  " + dc.getTsn());
+                        if(Log.getLevel() == Log.VERB) {
+                            Log.verb("continued message no" + dc.getSSeqNo() + " with  " + dc.getTsn());
+                        }
                     } else {
                         // perhaps check sno ?
-                        Log.debug("Middle with no start" + dc.getSSeqNo() + " tsn " + dc.getTsn());
+                        if(Log.getLevel() == Log.VERB) {
+                            Log.debug("Middle with no start" + dc.getSSeqNo() + " tsn " + dc.getTsn());
+                        }
                     }
                     break;
                 case DataChunk.ENDFLAG:

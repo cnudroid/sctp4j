@@ -1,7 +1,8 @@
-package org.bouncycastle.tls.test;
+package com.env.sctp4j.test.sctp.dtls;
 
 import com.phono.srtplight.Log;
 import org.bouncycastle.tls.*;
+import org.bouncycastle.tls.test.MockDTLSClient;
 import pe.pi.sctp4j.sctp.SCTPByteStreamListener;
 import pe.pi.sctp4j.sctp.SCTPMessage;
 import pe.pi.sctp4j.sctp.SCTPStream;
@@ -99,17 +100,21 @@ public class StartDltsClient {
         assert (result instanceof BlockingSCTPStream);
         clientAssoc.sendHeartBeat();
         //Thread.sleep(3000);
-        Log.info("%%%%%%%%%%%%%%%%% let's start client snding msgs %%%%%%%%%%%%%%%%%%%%%");
-        scheduleMsgs(clientAssoc);
-//        int counter = 0;
-//        while(counter < 100){
-//            Log.info("$$$$$$$$$$$$$$$$$$$$$$$$$$  start "+ mediumMsgBytes.length);
-//            SCTPStream result1 = clientAssoc.mkStream(id+counter);
-//            SCTPMessage sctpMsg1 = new SCTPMessage(mediumMsgBytes, result1);
-//            clientAssoc.sendAndBlock(sctpMsg1);
-//            Log.info("####################  END "+ mediumMsgBytes.length);
-//            counter++;
-//        }
+        Log.info("%%%%%%%%%%%%%%%%% let's start client sending msgs %%%%%%%%%%%%%%%%%%%%%");
+        //scheduleMsgs(clientAssoc);
+        scheduleMultipleMsgsAtFixedRate(clientAssoc);
+    }
+
+    private static void scheduleMultipleMsgsAtFixedRate(ThreadedAssociation clientAssoc) {
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);//Executors.newSingleThreadScheduledExecutor();
+        AtomicInteger counter = new AtomicInteger();
+        for(int i=0;i<5;i++) {
+            scheduledExecutorService.scheduleAtFixedRate(
+                    () -> {
+                        sendMsg(clientAssoc, counter);
+                    }, 5, 1, TimeUnit.SECONDS
+            );
+        }
     }
 
     private static void scheduleMsgs(ThreadedAssociation clientAssoc) {
@@ -117,19 +122,22 @@ public class StartDltsClient {
         AtomicInteger counter = new AtomicInteger();
         scheduledExecutorService.scheduleWithFixedDelay(
                 ()-> {
-                    try {
-
-                        byte[] msgBytes = (mediumSizeMsg + counter.getAndIncrement()).getBytes();
-                        Log.info("$$$$$$$$$$$$$$$$$$$$$$$$$$  start "+ msgBytes.length);
-                        SCTPStream result1 = clientAssoc.mkStream(SecureRandom.getInstanceStrong().nextInt());
-                        SCTPMessage sctpMsg1 = new SCTPMessage(msgBytes, result1);
-                        clientAssoc.sendAndBlock(sctpMsg1);
-                        Log.info("####################  END  Client sent file content to Server");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    sendMsg(clientAssoc, counter);
                 }, 5, 1, TimeUnit.SECONDS
         );
+    }
+
+    private static void sendMsg(ThreadedAssociation clientAssoc, AtomicInteger counter) {
+        try {
+            byte[] msgBytes = (mediumSizeMsg + counter.getAndIncrement()).getBytes();
+            Log.info("$$$$$$$$$$$$$$$$$$$$$$$$$$  start "+ msgBytes.length);
+            SCTPStream result1 = clientAssoc.mkStream(SecureRandom.getInstanceStrong().nextInt());
+            SCTPMessage sctpMsg1 = new SCTPMessage(msgBytes, result1);
+            clientAssoc.sendAndBlock(sctpMsg1);
+            Log.info("Counter " + counter.intValue()+"  ####################  END  Client sent file content to Server");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private static void sendDtlsMsg(DTLSTransport dtls) throws IOException {
