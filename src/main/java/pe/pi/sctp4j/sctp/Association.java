@@ -16,6 +16,8 @@
  */
 package pe.pi.sctp4j.sctp;
 
+import com.env.java11.dtls.SslEngineUtils;
+import com.env.java11.dtls.SslnfoObj;
 import pe.pi.sctp4j.sctp.messages.exceptions.SctpPacketFormatException;
 import pe.pi.sctp4j.sctp.behave.SCTPStreamBehaviour;
 import pe.pi.sctp4j.sctp.messages.exceptions.UnreadyAssociationException;
@@ -27,6 +29,7 @@ import pe.pi.sctp4j.sctp.messages.params.StaleCookieError;
 import pe.pi.sctp4j.sctp.small.BlockingSCTPStream;
 
 import com.phono.srtplight.Log;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.Buffer;
@@ -39,7 +42,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.bouncycastle.tls.DatagramTransport;
 
 /**
  *
@@ -125,7 +127,7 @@ abstract public class Association {
      HB.interval - 30 seconds
      HB.Max.Burst - 1
      */
-    protected final DatagramTransport _transp;
+    protected SslnfoObj _sslnfoObj;
     private Thread _rcv;
     private int _peerVerTag;
     protected int _myVerTag;
@@ -240,16 +242,18 @@ abstract public class Association {
             public void run() {
                 int length = -99;
                 try {
-                    byte[] buf = new byte[1500];
+                   // byte[] buf = new byte[1024];
                     while (_rcv != null) {
                         try {
-                            length = _transp.receive(buf, 0, buf.length, TICK);
-                            if (length > 0) {
-                                String b = Packet.getHex(buf, length);
-                                Log.verb("DTLS message recieved\n" + b.toString());
-                                ByteBuffer pbb = ByteBuffer.wrap(buf);
-                                ((Buffer) pbb).limit(length);
-                                Packet rec = new Packet(pbb);
+                            ByteBuffer rcvdBuf = SslEngineUtils.receiveAppData(_sslnfoObj);
+                            //length = _transp.receive(buf, 0, buf.length, TICK);
+                            //length = buf.length;
+                            if (rcvdBuf.remaining() > 0) {
+                                //String b = Packet.getHex(buf, length);
+                                Log.verb("DTLS message recieved\n");
+                               // ByteBuffer pbb = ByteBuffer.wrap(buf);
+                                //((Buffer) pbb).limit(length);
+                                Packet rec = new Packet(rcvdBuf);
                                 Log.debug("SCTP message parsed\n" + rec.toString());
                                 deal(rec);
                             } else {
@@ -263,7 +267,7 @@ abstract public class Association {
                     }
                     Log.verb("SCTP message recv null\n Shutting down.");
 
-                    _transp.close();
+                    //_transp.close();
 
                 } catch (java.io.EOFException eof) {
                     unexpectedClose(eof);
@@ -284,23 +288,23 @@ abstract public class Association {
         _rcv.start();
     }
 
-    public Association(DatagramTransport transport, AssociationListener al) {
-        this(transport, al, false); // default is server
+    public Association(SslnfoObj sslnfoObj, AssociationListener al) {
+        this(sslnfoObj, al, false); // default is server
     }
 
-    public Association(DatagramTransport transport, AssociationListener al, boolean client) {
+    public Association(SslnfoObj sslnfoObj, AssociationListener al, boolean client) {
         //Log.setLevel(Log.ALL);
         Log.debug("Created an Associaction of type: " + this.getClass().getSimpleName());
         _al = al;
         _random = new SecureRandom();
         _myVerTag = _random.nextInt();
-        _transp = transport;
+        _sslnfoObj = sslnfoObj;
         _streams = new HashMap();
         _outbound = new HashMap<Long, DataChunk>();
         _holdingPen = new HashMap<Long, DataChunk>();
         _nearTSN = _random.nextInt(Integer.MAX_VALUE);
         _state = State.CLOSED;
-        if (_transp != null) {
+        if (_sslnfoObj != null) {
             startRcv();
         } else {
             Log.error("Created an Associaction with a null transport somehow...");
@@ -333,12 +337,14 @@ abstract public class Association {
         send(dub);
     }
 
-    protected void send(Chunk c[]) throws SctpPacketFormatException, IOException {
+    protected void send(Chunk c[]) throws SctpPacketFormatException, IOException, Exception {
         if ((c != null) && (c.length > 0)) {
             ByteBuffer obb = mkPkt(c);
-            Log.verb("sending SCTP packet" + Packet.getHex(obb));
+            Log.verb("sending SCTP packet");// + Packet.getHex(obb));
+           // obb.flip();
             synchronized (this) {
-                _transp.send(obb.array(), obb.arrayOffset(), obb.position());
+                SslEngineUtils.deliverAppData(_sslnfoObj, obb);
+               // _transp.send(obb.array(), obb.arrayOffset(), obb.position());
             }
         } else {
             Log.verb("Blocked empty packet send() - probably no response needed.");
@@ -541,6 +547,9 @@ abstract public class Association {
         } catch (java.io.EOFException end) {
             unexpectedClose(end);
         } // todo need timer here.....
+        catch (Exception end) {
+            unexpectedClose(end);
+        }
     }
 
     protected Chunk[] iackDeal(InitAckChunk iack) {
@@ -957,7 +966,7 @@ abstract public class Association {
             Chunk[] hack = {dcopen};
             try {
                 send(hack);
-            } catch (java.io.EOFException end) {
+            } catch (Exception end) {
                 unexpectedClose(end);
             }
         } else {
@@ -976,6 +985,7 @@ abstract public class Association {
 
     public boolean canSend() {
         boolean ok;
+        Log.info("State is "+ _state.name());
         switch (_state) {
             case ESTABLISHED:
                 SHUTDOWNPENDING:
@@ -988,7 +998,7 @@ abstract public class Association {
         return ok;
     }
 
-    public void unexpectedClose(EOFException end) {
+    public void unexpectedClose(Exception end) {
         Log.debug("Unxepected association close " + end.getMessage());
         try {
             closeAllStreams();

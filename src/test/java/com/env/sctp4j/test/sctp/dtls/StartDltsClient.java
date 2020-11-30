@@ -1,25 +1,37 @@
 package com.env.sctp4j.test.sctp.dtls;
 
+import com.env.java11.dtls.SslEngineUtils;
+import com.env.java11.dtls.SslnfoObj;
 import com.phono.srtplight.Log;
 import org.bouncycastle.tls.*;
 import org.bouncycastle.tls.test.MockDTLSClient;
 import pe.pi.sctp4j.sctp.SCTPByteStreamListener;
-import pe.pi.sctp4j.sctp.SCTPMessage;
 import pe.pi.sctp4j.sctp.SCTPStream;
 import pe.pi.sctp4j.sctp.behave.OrderedStreamBehaviour;
+import pe.pi.sctp4j.sctp.behave.UnorderedStreamBehaviour;
 import pe.pi.sctp4j.sctp.small.BlockingSCTPStream;
 import pe.pi.sctp4j.sctp.small.MockAssociationListener;
 import pe.pi.sctp4j.sctp.small.ThreadedAssociation;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.security.SecureRandom;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A simple test designed to conduct a DTLS handshake with an external DTLS server.
@@ -29,23 +41,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  * </p>
  */
 public class StartDltsClient {
-    private static final SecureRandom secureRandom = new SecureRandom();
-    private static final String mediumSizeMsg = "***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END";
+    private static  String mediumSizeMsg = "***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***this is really asomrhings fsdpfsdf sdfsdfsd ***------------------------------------------------------END";
+
+
+    private static int SOCKET_TIMEOUT = 10 * 1000; // in millis
+
+    private static  byte[] fileBytes;
+    private static ThreadedAssociation clientAssoc;
 
     public static void main(String[] args)
             throws Exception {
-        InetAddress address = InetAddress.getLocalHost();
-        int port = 5556;
-        Log.setLevel(Log.INFO);
 
-//        File file = new File(StartDltsClient.class.getResource("proxy-test.log").toURI());
-//        byte[] fileContent = Files.readAllBytes(file.toPath());
+        Log.setLevel(Log.VERB);
 
-        byte[] mediumMsgBytes = mediumSizeMsg.getBytes();
+        try (FileInputStream fis = new FileInputStream("src/test/resources/1mb.pdf")) {
+            fileBytes = fis.readAllBytes();
+        }
 
-        MockDTLSClient client = new MockDTLSClient(null);
-
-        DTLSTransport dtls = openDTLSConnection(address, port, client);
         AtomicInteger counte1r = new AtomicInteger();
         final SCTPByteStreamListener rsl = new SCTPByteStreamListener() {
             @Override
@@ -55,7 +67,16 @@ public class StartDltsClient {
 
             @Override
             public void onMessage(SCTPStream s, byte[] message) {
-                Log.info("Counter --"+ counte1r.getAndIncrement() + "Rcvd Byte on message length: " + message.length);
+                Log.info("Counter --"+ counte1r.getAndIncrement() + "Rcvd Byte on message: " + (message).length);
+                //try sending back on the same stream
+
+                try {
+                    //String addTail = new StringBuilder(("START-")).append(new String(message)).toString();
+                    makeNewStreamAndSend();
+                   // s.send(message);
+                } catch (Exception e) {
+                    Log.error("Exception while sending msg back to server");
+                }
             }
 
             @Override
@@ -75,89 +96,97 @@ public class StartDltsClient {
 
         //create SCTP instance
         MockAssociationListener associationListener = new MockAssociationListener();
-        ThreadedAssociation clientAssoc = new ThreadedAssociation(dtls, clientListener);
+        // create SSLEngine
+        SSLEngine engine = SslEngineUtils.createSSLEngine(true);
+        DatagramSocket clientSocket = new DatagramSocket();
+        clientSocket.setSoTimeout(SOCKET_TIMEOUT);
+        InetAddress address = InetAddress.getLocalHost();
+        int port = 5556;
+        InetSocketAddress serverSocketAddr = new InetSocketAddress(address, port);
+        // handshaking
+        SslEngineUtils.handshake(engine, clientSocket, serverSocketAddr, "Client");
+        SSLSession session = engine.getSession();
+        int packetBufferSize = session.getPacketBufferSize();
+        int applicationBufferSize = session.getApplicationBufferSize();
+        SslnfoObj sslnfoObj = new SslnfoObj(engine, clientSocket, packetBufferSize, applicationBufferSize, true, serverSocketAddr);
+        clientAssoc = new ThreadedAssociation(sslnfoObj, clientListener);
         clientAssoc.associate();
         synchronized (clientListener) {
-            clientListener.wait(1000);
-            //assertTrue(clientListener.associated);
+            clientListener.wait(5000);
+            assertTrue(clientListener.associated);
         }
-
-        System.out.println("Receive limit: " + dtls.getReceiveLimit());
-        System.out.println("Send limit: " + dtls.getSendLimit());
-
-       // Thread.sleep(1000);
-        // Send and hopefully receive a packet back
-
-        int id = 10;
-        SCTPStream result = clientAssoc.mkStream(id);
-        assert (result instanceof BlockingSCTPStream);
         clientAssoc.sendHeartBeat();
-        //Thread.sleep(3000);
-        Log.info("%%%%%%%%%%%%%%%%% let's start client sending msgs %%%%%%%%%%%%%%%%%%%%%");
-        /**
-         * uncommented this method will send single msg of 8k size with fixed delay
-         * this is WORKING
-         */
-        //scheduleMsgs(clientAssoc);
-        /**
-         * this method will send 5 concurrent msgs of size 8k.
-         * this is NOT WORKING
-         */
-        scheduleMultipleMsgsAtFixedRate(clientAssoc);
-        /**
-         * basically if we send two requests in parallel, this is also NOT WORKING.
-         *
-         */
-        scheduleMultipleMsgsConcurrently(clientAssoc);
+        SCTPStream sctpStream = clientAssoc.mkStream(999);
+     //   scheduleMultipleMsgsAtFixedRate(clientAssoc, sctpStream);
+
     }
 
-    private static void scheduleMultipleMsgsConcurrently(ThreadedAssociation clientAssoc) {
+   // scheduleMultipleMsgsAtFixedRate(clientAssoc, result);
+    /**
+     * basically if we send two requests in parallel, this is also NOT WORKING.
+     *
+     */
+    // scheduleMultipleMsgsConcurrently(clientAssoc, result);
+
+    private static void scheduleMultipleMsgsConcurrently(ThreadedAssociation clientAssoc, SCTPStream result) {
         ExecutorService _ex_service = Executors.newFixedThreadPool(5);
         AtomicInteger counter = new AtomicInteger();
         for(int j=0;j<2;j++) {
-            _ex_service.submit(() -> sendMsg(clientAssoc, counter));
+            _ex_service.submit(() -> sendMsg(clientAssoc, result, counter));
         }
     }
 
     /**
      * this method will send 5 concurrent msgs of size 8k.
      */
-    private static void scheduleMultipleMsgsAtFixedRate(ThreadedAssociation clientAssoc) {
+    private static void scheduleMultipleMsgsAtFixedRate(ThreadedAssociation clientAssoc, SCTPStream result) {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(10);//Executors.newSingleThreadScheduledExecutor();
         AtomicInteger counter = new AtomicInteger();
-        for(int i=0;i<5;i++) {
+       // for(int i=0;i<5;i++) {
             scheduledExecutorService.scheduleAtFixedRate(
                     () -> {
-                        sendMsg(clientAssoc, counter);
+                        sendMsg(clientAssoc, result, counter);
                     }, 5, 1, TimeUnit.SECONDS
             );
-        }
+      //  }
     }
 
     /**
      *  this method will send single msg of 8k size with fixed delay
      */
-    private static void scheduleMsgs(ThreadedAssociation clientAssoc) {
+    private static void scheduleMsgs(ThreadedAssociation clientAssoc, SCTPStream result) {
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(5);//Executors.newSingleThreadScheduledExecutor();
         AtomicInteger counter = new AtomicInteger();
         scheduledExecutorService.scheduleWithFixedDelay(
                 ()-> {
-                    sendMsg(clientAssoc, counter);
+                    sendMsg(clientAssoc, result, counter);
                 }, 5, 1, TimeUnit.SECONDS
         );
     }
 
-    private static void sendMsg(ThreadedAssociation clientAssoc, AtomicInteger counter) {
+    private static void sendMsg(ThreadedAssociation clientAssoc, SCTPStream result, AtomicInteger counter) {
         try {
             byte[] msgBytes = (mediumSizeMsg + counter.getAndIncrement()).getBytes();
             Log.info("$$$$$$$$$$$$$$$$$$$$$$$$$$  start "+ msgBytes.length);
-            SCTPStream result1 = clientAssoc.mkStream(SecureRandom.getInstanceStrong().nextInt());
-            SCTPMessage sctpMsg1 = new SCTPMessage(msgBytes, result1);
-            clientAssoc.sendAndBlock(sctpMsg1);
+            //SCTPStream result1 = clientAssoc.mkStream(SecureRandom.getInstanceStrong().nextInt());
+            //SCTPMessage sctpMsg1 = new SCTPMessage(msgBytes, result1);
+            //clientAssoc.sendAndBlock(sctpMsg1);
+            result.send(msgBytes);
             Log.info("Counter " + counter.intValue()+"  ####################  END  Client sent file content to Server");
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void makeNewStreamAndSend() throws Exception {
+        SCTPStream newStream = clientAssoc.mkStream(new Random().nextInt());
+        sendMsg(newStream);
+    }
+
+    private static void sendMsg(SCTPStream sctpStream) throws Exception {
+        Log.info("Sending bytes of length"+ fileBytes.length);
+        sctpStream.send(fileBytes);
+        Log.info("Sent bytes of length"+ fileBytes.length);
     }
 
     private static void sendDtlsMsg(DTLSTransport dtls) throws IOException {

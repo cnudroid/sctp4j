@@ -36,7 +36,7 @@ public class DTLSServerTest
 
         int mtu = 1500;
 
-        Log.setLevel(Log.ALL);
+        Log.setLevel(Log.INFO);
 
         SecureRandom secureRandom = new SecureRandom();
 
@@ -128,7 +128,7 @@ public class DTLSServerTest
             }
         };
         System.out.println("Accepted -------------------------------");
-        ThreadedAssociation instanceRight = new ThreadedAssociation(dtlsServer, serverAssListener);
+       // ThreadedAssociation instanceRight = new ThreadedAssociation(dtlsServer, serverAssListener);
         synchronized (serverAssListener) {
             serverAssListener.wait(2000);
             //assertTrue(serverAssListener.associated);

@@ -71,6 +71,8 @@ public class DataChunk extends Chunk implements Comparable, Comparator {
     private int _retryCount;
     private long _sentTime;
 
+    private int _defaultCapacity = 512;
+
     public DataChunk(byte type, byte flags, int length, ByteBuffer pkt) {
         super(type, flags, length, pkt);
         Log.debug("read in chunk header " + length);
@@ -160,6 +162,12 @@ public class DataChunk extends Chunk implements Comparable, Comparator {
         setFlags(0); // default assumption.
     }
 
+    public DataChunk(int capacity) {
+        this();
+        _defaultCapacity = capacity;
+    }
+
+
     /*
    
      0                   1                   2                   3
@@ -231,21 +239,21 @@ public class DataChunk extends Chunk implements Comparable, Comparator {
     }
 
     /**
-     * @param _tsn the _tsn to set
+     * @param tsn the _tsn to set
      */
     public void setTsn(long tsn) {
         _tsn = tsn;
     }
 
     /**
-     * @param _streamId the _streamId to set
+     * @param streamId the _streamId to set
      */
     public void setStreamId(int streamId) {
         _streamId = streamId;
     }
 
     /**
-     * @param _sSeqNo the _sSeqNo to set
+     * @param sSeqNo the _sSeqNo to set
      */
     public void setsSeqNo(int sSeqNo) {
         _sSeqNo = sSeqNo;
@@ -291,8 +299,8 @@ public class DataChunk extends Chunk implements Comparable, Comparator {
         return _flags;
     }
 
-    public static int getCapacity() {
-        return 1024; // shrug - needs to be less than the theoretical MTU or slow start fails.
+    public int getCapacity() {
+        return _defaultCapacity-50; // shrug - needs to be less than the theoretical MTU or slow start fails.
     }
 
     public void setData(byte[] data) {

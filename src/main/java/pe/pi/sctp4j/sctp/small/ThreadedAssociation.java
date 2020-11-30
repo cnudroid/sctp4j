@@ -16,6 +16,8 @@
  */
 package pe.pi.sctp4j.sctp.small;
 
+import com.env.java11.dtls.SslEngineUtils;
+import com.env.java11.dtls.SslnfoObj;
 import pe.pi.sctp4j.sctp.Association;
 import pe.pi.sctp4j.sctp.AssociationListener;
 import pe.pi.sctp4j.sctp.SCTPMessage;
@@ -24,12 +26,15 @@ import pe.pi.sctp4j.sctp.messages.*;
 import pe.pi.sctp4j.sctp.messages.exceptions.SctpPacketFormatException;
 import com.phono.srtplight.Log;
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import org.bouncycastle.tls.DatagramTransport;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * An association who's retries etc are managed with plain old threads.
@@ -135,19 +140,19 @@ public class ThreadedAssociation extends Association implements Runnable {
     private final double _rtoMin = 1.0;
     private final double _rtoMax = 60.0;
 
-    public ThreadedAssociation(DatagramTransport transport, AssociationListener al) {
-        super(transport, al);
-        try {
-            _transpMTU = Math.min(transport.getReceiveLimit(), transport.getSendLimit());
+    public ThreadedAssociation(SslnfoObj sslnfoObj, AssociationListener al) {
+        super(sslnfoObj, al);
+//        try {
+            _transpMTU = sslnfoObj.getApplicationBufferSize();//Math.min(transport.getReceiveLimit(), transport.getSendLimit());
             Log.debug("Transport MTU is now " + _transpMTU);
-        } catch (IOException x) {
-            Log.warn("Failed to get suitable transport mtu ");
-        }
+//        } catch (IOException x) {
+//            Log.warn("Failed to get suitable transport mtu ");
+//        }
         _freeBlocks = new ArrayBlockingQueue(MAXBLOCKS);
         _inFlight = new HashMap(MAXBLOCKS);
 
         for (int i = 0; i < MAXBLOCKS; i++) {
-            DataChunk dc = new DataChunk();
+            DataChunk dc = new DataChunk(sslnfoObj.getApplicationBufferSize());
             _freeBlocks.add(dc);
         }
         resetCwnd();
@@ -247,7 +252,7 @@ public class ThreadedAssociation extends Association implements Runnable {
                 Log.error("badly formatted chunk " + d.toString());
             } catch (java.io.EOFException end) {
                 unexpectedClose(end);
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 Log.error("Can not send chunk " + d.toString());
             }
         }
@@ -278,7 +283,7 @@ public class ThreadedAssociation extends Association implements Runnable {
     synchronized public SCTPMessage makeMessage(byte[] bytes, BlockingSCTPStream s) {
         SCTPMessage m = null;
         if (super.canSend()) {
-            if (bytes.length < this.maxMessageSize()) {
+            if (bytes.length > 0) {
                 m = new SCTPMessage(bytes, s);
                 synchronized (s) {
                     int mseq = s.getNextMessageSeqOut();
@@ -294,7 +299,7 @@ public class ThreadedAssociation extends Association implements Runnable {
     public SCTPMessage makeMessage(String bytes, BlockingSCTPStream s) {
         SCTPMessage m = null;
         if (super.canSend()) {
-            if (bytes.length() < this.maxMessageSize()) {
+            if (bytes.length() > 0) {
                 m = new SCTPMessage(bytes, s);
                 synchronized (s) {
                     int mseq = s.getNextMessageSeqOut();
@@ -371,6 +376,7 @@ public class ThreadedAssociation extends Association implements Runnable {
      */
     protected Chunk[] inboundInit(InitChunk init) {
         _rwnd = init.getAdRecWinCredit();
+        Log.info("*** rwnd" + _rwnd);
         setSsthresh(init);
         return super.inboundInit(init);
     }
@@ -591,7 +597,7 @@ public class ThreadedAssociation extends Association implements Runnable {
      attack outlined in [SAVAGE99].
      */
     protected void adjustCwind(boolean didAdvance, int inFlightBytes, int totalAcked) {
-        boolean fullyUtilized = ((inFlightBytes - _cwnd) < DataChunk.getCapacity()); // could we fit one more in?
+        boolean fullyUtilized = ((inFlightBytes - _cwnd) < _sslnfoObj.getApplicationBufferSize()); // could we fit one more in?
 
         if (_cwnd <= _ssthresh) {
             // slow start
