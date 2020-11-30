@@ -38,7 +38,7 @@ import org.bouncycastle.tls.DatagramTransport;
  */
 public class ThreadedAssociation extends Association implements Runnable {
 
-    final static int MAXBLOCKS = 100; // some number....
+    final static int MAXBLOCKS = 1000; // some number....
     private ArrayBlockingQueue<DataChunk> _freeBlocks;
     private HashMap<Long, DataChunk> _inFlight;
     private long _lastCumuTSNAck;
@@ -278,7 +278,7 @@ public class ThreadedAssociation extends Association implements Runnable {
     synchronized public SCTPMessage makeMessage(byte[] bytes, BlockingSCTPStream s) {
         SCTPMessage m = null;
         if (super.canSend()) {
-            if (bytes.length < this.maxMessageSize()) {
+            if (bytes.length > 0) {
                 m = new SCTPMessage(bytes, s);
                 synchronized (s) {
                     int mseq = s.getNextMessageSeqOut();
@@ -506,7 +506,12 @@ public class ThreadedAssociation extends Association implements Runnable {
                     }
                 }
             }
+            Log.debug("sack.getArWin() " + sack.getArWin() );
+            Log.debug("totalDataInFlight " +totalDataInFlight );
             _rwnd = sack.getArWin() - totalDataInFlight;
+//            if(_rwnd == 0){
+//                _rwnd = _transpMTU;
+//            }
             Log.debug("Setting rwnd to " + _rwnd);
             boolean advanced = (_lastCumuTSNAck < ackedTo);
             adjustCwind(advanced, totalDataInFlight, totalAcked);

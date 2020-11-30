@@ -691,7 +691,7 @@ abstract public class Association {
         Chunk dummy[] = new Chunk[0];
         long tsn = dc.getTsn();
         Long tsn_L = new Long(tsn);
-        if (tsn > _farTSN) {
+        if (tsn >= _farTSN) {
             // put it in the pen.
             DataChunk dup = _holdingPen.get(tsn_L);
             if (dup != null) {

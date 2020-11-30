@@ -9,16 +9,21 @@ import org.bouncycastle.tls.test.MockDTLSServer;
 import pe.pi.sctp4j.sctp.SCTPByteStreamListener;
 import pe.pi.sctp4j.sctp.SCTPStream;
 import pe.pi.sctp4j.sctp.behave.OrderedStreamBehaviour;
+import pe.pi.sctp4j.sctp.behave.UnorderedStreamBehaviour;
 import pe.pi.sctp4j.sctp.small.MockAssociationListener;
 import pe.pi.sctp4j.sctp.small.ThreadedAssociation;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A simple test designed to conduct a DTLS handshake with an external DTLS client.
@@ -29,6 +34,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DTLSServerTest
 {
+    private static  byte[] fileBytes;
+    private static ThreadedAssociation instanceRight;
+    private static SCTPStream newStream;
+
     public static void main(String[] args)
             throws Exception
     {
@@ -36,7 +45,11 @@ public class DTLSServerTest
 
         int mtu = 1500;
 
-        Log.setLevel(Log.ALL);
+        Log.setLevel(Log.INFO);
+
+        try (FileInputStream fis = new FileInputStream("src/test/resources/1mb.txt")) {
+            fileBytes = fis.readAllBytes();
+        }
 
         SecureRandom secureRandom = new SecureRandom();
 
@@ -99,6 +112,11 @@ public class DTLSServerTest
 
                 //srvRcvdBuf.put(message);
                 Log.info("Counter --"+ counter.getAndIncrement() + " Byte RCVD and message is  : " + (message).length);
+                try {
+                    makeNewStreamAndSend(fileBytes);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
 
 //                Path path = Paths.get("logs/content-server.log"+ counter.getAndIncrement());
@@ -123,18 +141,19 @@ public class DTLSServerTest
             @Override
             public void onRawStream(SCTPStream s) {
                 super.onRawStream(s);
-                s.setBehave(new OrderedStreamBehaviour());
+                s.setBehave(new UnorderedStreamBehaviour());
                 s.setSCTPStreamListener(rsl);
             }
         };
         System.out.println("Accepted -------------------------------");
-        ThreadedAssociation instanceRight = new ThreadedAssociation(dtlsServer, serverAssListener);
+        instanceRight = new ThreadedAssociation(dtlsServer, serverAssListener);
         synchronized (serverAssListener) {
             serverAssListener.wait(2000);
-            //assertTrue(serverAssListener.associated);
+            assertTrue(serverAssListener.associated);
         }
         System.out.println("Associated -------------------------------");
-       // instanceRight.sendHeartBeat();
+        newStream = instanceRight.mkStream(new Random().nextInt());
+        // instanceRight.sendHeartBeat();
         // sleep for sometime
        // Thread.sleep(2000);
         System.out.println("Let's check RCVD data --  *********************   --");
@@ -161,11 +180,22 @@ public class DTLSServerTest
 //                    }
 //                }, 10, 1, TimeUnit.SECONDS
 //        );
-
+        makeNewStreamAndSend(fileBytes);
        // rcvAndSend(socket, dtlsServer);
        // Thread.sleep(3000);
         System.out.println("Closing  -------------------------------");
        // dtlsServer.close();
+    }
+
+    private static void makeNewStreamAndSend(byte[] fileBytes) throws Exception {
+//        SCTPStream newStream = instanceRight.mkStream(new Random().nextInt());
+        sendMsg(newStream, fileBytes);
+    }
+
+    private static void sendMsg(SCTPStream sctpStream, byte[] fileBytes) throws Exception {
+        Log.info("Sending bytes of length"+ fileBytes.length);
+        sctpStream.send(fileBytes);
+        Log.info("Sent bytes of length"+ fileBytes.length);
     }
 
     private static void rcvAndSend(DatagramSocket socket, DTLSTransport dtlsServer) throws IOException {
